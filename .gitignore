@@ -1,0 +1,14 @@
+haskell-programming-1.0RC2-ereader.pdf
+haskell-programming.txt
+
+hangman/data/dict.txt
+hangman/.stack-work/
+addition/.stack-work/
+*/.stack-work/
+
+*.hi
+*.o
+
+*.swn
+*.swo
+*.swp
