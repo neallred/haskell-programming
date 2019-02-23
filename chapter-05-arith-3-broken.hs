@@ -6,4 +6,5 @@ main = do
   print 10
   print (negate (-1))
   print ((+) 0 blah)
-    where blah = negate 1
+  where
+    blah = negate 1
