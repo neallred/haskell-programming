@@ -88,9 +88,10 @@ f xs = w `x` 1
     w = length xs
 
 -- 2.
--- \x = x
+correctSyntax2 = \x -> x
+
 -- 3.
-fst' (a, b) = a-- Match the function names to their types
+fst' (a, b) = a -- Match the function names to their types
 ------------------------------------------
 -- 1. c)
 -- 2. b)
