@@ -5,6 +5,7 @@ hangman/data/dict.txt
 hangman/.stack-work/
 addition/.stack-work/
 */.stack-work/
+tmp-*
 
 *.hi
 *.o
