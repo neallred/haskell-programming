@@ -303,25 +303,101 @@ arith2Add x y = x + y
 arith2AddPF :: Int -> Int -> Int
 arith2AddPF = (+)
 
-arith2Add :: Int -> Int -> Int
-arith2Add x y = x + y
-
 arith2AddOne :: Int -> Int
 arith2AddOne x = (+) 1 x
 
 arith2AddOnePF :: Int -> Int
 arith2AddOnePF = (+ 1)
 
-main :: IO ()
-main = do
-  print (0 :: Int)
-  print (add 1 0)
-  print (addOne 0)
-  print (addOnePF 0)
-  print ((addOne . addOne) 0)
+print' = putStrLn . show
 
-  print ((addOnePF . addOne) 0)
-  print ((addOne . addOnePF) 0)
-  print ((addOnePF . addOnePF) 0)
-  print ((negate (addOne 0))
-  print ((negate .addOne) 0)
+arith2Main :: IO ()
+arith2Main = do
+  print' (0 :: Int) -- 0
+  print' (arith2Add 1 0) -- 1
+  print' (arith2AddOne 0) -- 1
+  print' (arith2AddOnePF 0) -- 1
+  print' ((arith2AddOne . arith2AddOne) 0) -- (\x -> 1 + ( 1 + x)) 0 == 2
+  print' ((arith2AddOnePF . arith2AddOne) 0) -- (\x -> (+) 1 (1 + x ) == 2 
+  print' ((arith2AddOne . arith2AddOnePF) 0) -- (\x -> (1 + ((+1) x)) 0 == 2
+  print' ((arith2AddOnePF . arith2AddOnePF) 0) -- \(x -> (+1) ((+1) x)) 0 == 2
+  print' (negate (arith2AddOne 0)) -- negate ((+1) 0) == -1
+  print' ((negate . arith2AddOne) 0) -- (\x -> negate ((+1) x)) 0 == -1
+  print'
+    ((arith2AddOne . arith2AddOne . arith2AddOne . negate . arith2AddOne) 0)
+  -- (\x -> (1 + (1 + (1 + (negate (1 + x)))))) 0 == 2
+
+-- Chapter exercises
+-- Multiple choice
+-- 1. d) A polymorphic function may resolve to values of different types, depending on inputs
+-- 2. b) Char -> [String]
+-- 3. d) (Ord a, Num a) => a -> Bool
+-- 4. b) is a higher-order function
+-- 5. a) f True :: Bool
+-- Let's write code
+-------------------
+-- 1.
+tensDigit :: Integral a => a -> a
+tensDigit x = d
+  where
+    xLast = x `div` 10
+    d = xLast `mod` 10
+
+-- a)
+tensDigit' :: Integral a => a -> a
+tensDigit' x = (flip mod) 10 . fst $ divMod x 10
+
+-- b) yes
+hundreds :: Integral a => a -> a
+hundreds x = (flip mod) 100 . fst $ divMod x 100
+
+-- c)
+-- Revisit this one
+-- 2.
+foldBoolPattern :: a -> a -> Bool -> a
+foldBoolPattern x _ False = x
+foldBoolPattern _ y True = y
+
+foldBoolGuard :: a -> a -> Bool -> a
+foldBoolGuard x y bool
+  | not bool = x
+  | bool = y
+
+--
+writeCode3g :: (a -> b) -> (a, c) -> (b, c)
+writeCode3g f (x, y) = (f x, y)
+
+writeCode4RoundTrip :: (Show a, Read a) => a -> a
+writeCode4RoundTrip a = read (show a)
+
+-- It works because the showable thing gets converted to the string.
+-- And the string 
+-- For this (Num a) => a type, roundTrip is an identity function.
+-- Are there data types that have instances of Show and Read that do not combine to the identity function
+writeCode4Main = do
+  print (writeCode4RoundTrip 4)
+  print (id 4)
+
+writeCode5RoundTrip :: (Show a, Read a) => a -> a
+writeCode5RoundTrip = read . show
+
+-- 6.
+writeCode6RoundTrip :: (Show a, Read b) => a -> b
+writeCode6RoundTrip = read . show
+
+-- print $ ((writeCode6RoundTrip 3) :: Int)
+-- Chapter definitions
+data SumOfThree a b c
+  = FirstPossible a
+  | SecondPossible b
+  | ThirdPossible c
+  deriving (Eq, Show)
+
+sumToInt :: SumOfThree a b c -> Integer
+sumToInt (FirstPossible _) = 0
+sumToInt (SecondPossible _) = 1
+sumToInt (ThirdPossible _) = 2
+
+sumToInt' :: SumOfThree a b c -> Integer
+sumToInt' (FirstPossible _) = 0
+sumToInt' _ = 1
