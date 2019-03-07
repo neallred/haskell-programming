@@ -99,6 +99,46 @@ appedCatty = cattyConny "woops"
 
 frappe :: String -> String
 frappe = flippy "haha"
+
 -- 1. "woops mrow woohoo!"
--- 2. "haha mrow 1"
+-- 2. "1 mrow haha"
 -- 3. "woops mrow 2 mrow haha"
+-- 4. "woops mrow blue mrow haha"
+-- 5. "pink mrow haha mrow green mrow woops mrow blue"
+-- 6. "are mrow Pugs mrow awesome"
+-- Recursion
+------------
+-- 1.
+--dividedBy 15 2
+-- go 15 2 0
+-- otherwise = go (15 - 2) 2 (0 + 1)
+-- go 13 2 1
+-- otherwise = go (13 - 2) 2 (1 + 1)
+-- go 11 2 2
+-- otherwise = go (11 - 2) 2 (2 + 1)
+-- go 9 2 3
+-- otherwise = go (9 - 2) 2 (3 + 1)
+-- go 7 2 4
+-- otherwise = go (7 - 2) 2 (4 + 1)
+-- go 5 2 5
+-- otherwise = go (5 - 2) 2 (5 + 1)
+-- go 3 2 6
+-- otherwise = go (3 - 2) 2 (6 + 1)
+-- go 1 2 7
+-- 1 < 2 = (7, 1)
+-- 2.
+addThroughN :: (Eq a, Num a) => a -> a
+addThroughN x = go x 0
+  where
+    go n count
+      | 1 == n = count + 1
+      | otherwise = go (n - 1) (count + n)
+
+-- 3.
+recursum :: (Integral a) => a -> a -> a
+recursum x y = go x y 0
+  where
+    go stepBy stepsLeft total
+      | stepsLeft == 0 = total
+      | otherwise = go stepBy (stepsLeft - 1) (total + stepBy)
+-- Fixing dividedBy
