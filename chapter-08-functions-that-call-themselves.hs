@@ -1,3 +1,7 @@
+module Chapter8 where
+
+import Data.List (intersperse)
+
 incTimes :: (Eq a, Num a) => a -> a -> a
 incTimes 0 n = n
 incTimes times n = 1 + incTimes (times - 1) n
@@ -142,3 +146,49 @@ recursum x y = go x y 0
       | stepsLeft == 0 = total
       | otherwise = go stepBy (stepsLeft - 1) (total + stepBy)
 -- Fixing dividedBy
+
+-- type DividedResult = Maybe (Integer, Integer)
+
+fixedDividedBy :: Integral a => a -> a -> Maybe (a, a)
+fixedDividedBy num denom =
+  if denom == 0 then Nothing else
+    go (abs num) (abs denom) 0
+      where
+        negativity = if num * denom < 0 then -1 else 1
+        go n d count
+          | n < d = Just (count * negativity , n)
+          | otherwise = go (n - d) d (count + 1)
+
+-- McCarthy91 function
+mcarthy91 :: (Integral a) => a -> a
+mcarthy91 x
+  | x > 100 = x - 10
+  | otherwise = mcarthy91 . mcarthy91 $ (x + 11)
+
+-- numbers into words
+digitToWord :: Int -> String
+digitToWord x
+  | x == 0 = "zero"
+  | x == 1 = "one"
+  | x == 2 = "two"
+  | x == 3 = "three"
+  | x == 4 = "four"
+  | x == 5 = "five"
+  | x == 6 = "six"
+  | x == 7 = "seven"
+  | x == 8 = "eight"
+  | x == 9 = "nine"
+
+digits :: Int -> [Int]
+digits x = go x []
+  where
+    go num acc =
+      let
+        (tens, remainder) = divMod num 10
+        result = remainder : acc
+      in
+        if tens == 0 then result
+                         else go tens result
+
+wordNumber :: Int -> String
+wordNumber = concat . intersperse "-" . map digitToWord . digits
