@@ -103,3 +103,13 @@ guessC = [(1, 64), (1, 81), (1, 100), (4, 64), (4, 81)]
 
 comprehended =
   (comprehendA == guessA && comprehendB == guessB && comprehendC == guessC)
+
+-- Exercises: Square Cube
+squareCubeMySqr = [x ^ 2 | x <- [1 .. 5]]
+
+squareCubeMyCube = [x ^ 3 | x <- [1 .. 5]]
+-- 1a. zip squareCubeMySqr squareCubeMyCube
+-- 1b. [(x ^ 2, x ^ 3) | x <- [1 .. 5]]
+-- 2a. filter (\(x,y) -> x < 50 && y < 50) (zip squareCubeMySqr squareCubeMyCube)
+-- 2b. [(x ^ 2, x ^ 3) | x <- [1 .. 5], x ^ 3 < 50]
+-- 3. length [(x ^ 2, x ^ 3) | x <- [1 .. 5], x ^ 3 < 50]
