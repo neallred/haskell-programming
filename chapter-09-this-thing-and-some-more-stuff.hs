@@ -1,5 +1,8 @@
 module Chapter9 where
 
+import Data.Bool
+import Data.Char
+
 -- Exercise: enumFromTo
 eft :: (Enum a) => a -> a -> [a]
 eft start end = go start end []
@@ -108,8 +111,109 @@ comprehended =
 squareCubeMySqr = [x ^ 2 | x <- [1 .. 5]]
 
 squareCubeMyCube = [x ^ 3 | x <- [1 .. 5]]
+
 -- 1a. zip squareCubeMySqr squareCubeMyCube
 -- 1b. [(x ^ 2, x ^ 3) | x <- [1 .. 5]]
 -- 2a. filter (\(x,y) -> x < 50 && y < 50) (zip squareCubeMySqr squareCubeMyCube)
 -- 2b. [(x ^ 2, x ^ 3) | x <- [1 .. 5], x ^ 3 < 50]
 -- 3. length [(x ^ 2, x ^ 3) | x <- [1 .. 5], x ^ 3 < 50]
+-- Exercises: Bottom Madness
+-- bottomMadness1 = [x ^ y | x <- [1, 2, 3, 4, 5], y <- [2, undefined]] -- blow up
+-- 
+-- bottomMadness2 = take 1 $ [x ^ y | x <- [1, 2, 3, 4, 5], y <- [2, undefined]] -- return 1
+-- 
+-- bottomMadness3 = sum [1, undefined, 3] -- blow up, has to evaluate all values
+-- 
+-- bottomMadness4 = length [1, 2, undefined] -- 3, it only recurses the spine
+-- 
+-- bottomMadness5 = length $ [1, 2, 3] ++ undefined -- blow up, it honly recurses the spine, however part of the spine itself is undefined
+-- 
+-- bottomMadness6 = take 1 $ filter even [1, 2, 3, undefined] -- [2] it lazily creates a constructor to create a list, but then it only takes the first element from the list constructor, so its ok.
+-- 
+-- bottomMadness7 take 1 $ filter even [1, 3, undefined] -- blow up, tries to read the values of the entire list because there are no even values in it, so it reaches undefined and blows up
+-- 
+-- bottomMadness8 take 1 $ filter odd [1, 3, undefined] -- [1], for the same reason as bottomMadness6
+-- 
+-- bottomMadness9 take 2 $ filter odd [1, 3, undefined] -- [1, 3], for the same reason as bottomMadness6
+-- 
+-- bottomMadness10 take 3 $ filter odd [1, 3, undefined] -- blow up, the first tow values are ok but it blows up on reaching the third value
+-- Intermission: Is it in normal form?
+-- 1. [1,2,3,4,5] NF
+-- 2. 1 : 2 : 3 : 4 : _ WHNF (or neither?)
+-- 3. enumFromTo 1 10 WHNF (or neither?)
+-- 4. length [1, 2, 3, 4 5] WHNF
+-- 5. sum (enumFromTo 1 10) neither
+-- 6. neither
+-- 7. NF
+-- What does map exist for if fmap can do everything it does?
+-- Exercises: More Bottoms
+--------------------------
+-- 1. take 1 $ map (+1) [undefined, 2, 3] - bottom.
+-- 2. take 1 $ map (+1) [1, undefined, 3] - 2
+-- 3. take 2 $ map (+1) [1, undefined, 3] - bottom
+-- 4. Turns each character in a string into a Bool denoting whether the character was a vowel.
+itIsMystery :: String -> [Bool]
+itIsMystery xs = map (\x -> elem x "aeiou") xs
+
+moreBottoms5a = map (^ 2) [1 .. 10] == [1, 4, 9, 16, 25, 36, 49, 64, 81, 100]
+
+moreBottoms5b = map minimum [[1 .. 10], [10 .. 20], [20 .. 30]] == [1, 10, 20]
+
+moreBottoms5c = map sum [[1 .. 5], [1 .. 5], [1 .. 5]] == [15, 15, 15]
+
+moreBottoms6 =
+  map
+    (\x -> bool x (-x) (x == 3) --if x == 3
+         --then (-x)
+         --else (x)) -- [1..10][1,2,-3,4,5,6,7,8,9,10]
+     )
+
+-- Exercises: Filtering
+-----------------------
+filtering1 x = mod x 3 == 0
+
+filtering1Value = filter filtering1 [1 .. 30] == enumFromThenTo 3 6 30
+
+filtering2 = length . filter filtering1
+
+myFilter = filter (not . flip elem ["a", "an", "the"]) . words
+
+-- Zipping exercises
+--------------------
+zip' :: [a] -> [b] -> [(a, b)]
+zip' [] _ = []
+zip' _ [] = []
+zip' (x:xs) (y:ys) = (x, y) : (zip' xs ys)
+
+-- Chapter Exercises
+--------------------
+-- Data.Char
+------------
+-- 1.
+isUpper' :: Char -> Bool
+isUpper' = undefined
+
+toUpper' :: Char -> Char
+toUpper' = undefined
+
+-- 2. To write a function that filters all the uppercase letters out of a String, use isUpper
+uppersOnly = filter isUpper
+
+-- 3.
+capitalize (x:xs) = toUpper x : xs
+capitalize "" = ""
+
+-- 4.
+upperAll (x:xs) = toUpper x : (capitalize xs)
+upperAll "" = ""
+
+-- 5.
+unsafeUpperFirst x = toUpper (head x)
+
+-- 6.
+unsafeUpperFirst' x = toUpper . head $ x
+
+unsafeUpperFirst'' = toUpper . head
+-- Ciphers
+----------
+-- See chapter-09-cipher.ha (module Chapter9Cipher)
