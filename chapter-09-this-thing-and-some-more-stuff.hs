@@ -214,6 +214,94 @@ unsafeUpperFirst x = toUpper (head x)
 unsafeUpperFirst' x = toUpper . head $ x
 
 unsafeUpperFirst'' = toUpper . head
+
 -- Ciphers
 ----------
 -- See chapter-09-cipher.ha (module Chapter9Cipher)
+-- Writing your own standard functions
+--------------------------------------
+and' :: [Bool] -> Bool
+and' [] = True
+and' (False:_) = False
+and' (_:xs) = and' xs
+
+-- 1.
+or' :: [Bool] -> Bool
+or' [] = False
+or' (True:_) = True
+or' (_:xs) = or' xs
+
+-- 2.
+any' :: (a -> Bool) -> [a] -> Bool
+any' f [] = True
+any' f xs = or' $ map f xs
+
+-- 3.
+elem' :: Eq a => a -> [a] -> Bool
+elem' candidate [] = False
+elem' candidate (x:xs)
+  | candidate == x = True
+  | otherwise = elem' candidate xs
+
+-- 4.
+reverse' :: [a] -> [a]
+reverse' [] = []
+reverse' (x:xs) = x : reverse' xs
+
+-- 5.
+squish :: [[a]] -> [a]
+squish [] = []
+squish (x:xs) = x ++ squish xs
+
+-- 6.
+squishMap :: (a -> [b]) -> [a] -> [b]
+squishMap f [] = []
+squishMap f (x:xs) = f x ++ squishMap f xs
+
+squishMapWorks =
+  and'
+    [ squishMap (\x -> [1, x, 3]) [2] == [1, 2, 3]
+    , squishMap (\x -> "WO " ++ [x] ++ " HOO ") "123" ==
+      "WO 1 HOO WO 2 HOO WO 3 HOO "
+    ]
+
+-- 7.
+squishAgain :: [[a]] -> [a]
+squishAgain = squishMap id
+
+-- 8.
+maximumBy' :: (a -> a -> Ordering) -> [a] -> a
+maximumBy' f [x] = x
+maximumBy' f (x1:x2:[]) =
+  if f x1 x2 == GT
+    then x1
+    else x2
+maximumBy' f (x1:x2:xs) =
+  maximumBy'
+    f
+    ((if f x1 x2 == GT
+        then x1
+        else x2) :
+     xs)
+
+-- 9.
+minimumBy' :: (a -> a -> Ordering) -> [a] -> a
+minimumBy' f [x] = x
+minimumBy' f (x1:x2:[]) =
+  if f x1 x2 == LT
+    then x1
+    else x2
+minimumBy' f (x1:x2:xs) =
+  minimumBy'
+    f
+    ((if f x1 x2 == LT
+        then x1
+        else x2) :
+     xs)
+
+-- 10
+maximum' :: (Ord a) => [a] -> a
+maximum' = maximumBy' compare
+
+minimum' :: (Ord a) => [a] -> a
+minimum' = minimumBy' compare
