@@ -2,6 +2,7 @@ module Chapter11Phone where
 
 import Data.Char
 import Data.List
+import qualified Data.Map as Map
 
 -- 1. Create the data structure
 data Key
@@ -62,7 +63,8 @@ allKeyChars =
   , keyCharsStar
   ]
 
--- alphabet = foldr (\(KeyChars _ chars) acc -> chars ++ acc) "" allKeyChars
+alphabet = foldr (\(KeyChars _ chars) acc -> chars ++ acc) "" allKeyChars
+
 type Presses = Int
 
 type Keypress = (Key, Presses)
@@ -195,8 +197,33 @@ convo =
   , "Lol ya"
   , "Just making sure rofl ur turn"
   ]
---
+
 -- 3. how many times do digits need to be pressed for each message?
+countTaps :: [Keypress] -> Presses
+countTaps = foldr (\(_, presses) acc -> acc + presses) 0
+
+totalTaps = map (countTaps . stringToTaps) convo
+
 -- 4. What was the most popular letter. What was its cost?
+sumValues _ b c = b + c
+
+getLetterCounts char = Map.insertWithKey sumValues char 1
+
+getMostPopularLetters :: Char -> Presses -> (String, Int) -> (String, Int)
+getMostPopularLetters char count acc@(candidates, candidateCount)
+  | count == candidateCount = (char : candidates, candidateCount)
+  | count > candidateCount = (char : "", count)
+  | count < candidateCount = acc
+
+mostPopularLettersByCount :: String -> (String, Int)
+mostPopularLettersByCount "" = ("", 0)
+mostPopularLettersByCount xs =
+  let charCounts = foldr getLetterCounts Map.empty (filter (`elem` alphabet) xs)
+      mostPopularWithCount =
+        Map.foldrWithKey getMostPopularLetters ("", 0) charCounts
+   in mostPopularWithCount
+-- fst.
+-- mostPopular = map mostPopularLettersByCount convo
+-- foldrWithKey :: (k -> a -> b -> b) -> b -> Map k a -> b
 -- 5. What was most popular letter over all?
 -- What was most popular word?
