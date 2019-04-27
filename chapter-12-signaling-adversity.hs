@@ -21,15 +21,15 @@ data PersonInvalid
 
 ageOkay :: Age -> Either [PersonInvalid] Age
 ageOkay age =
-  case age >= 0 of
-    True -> Right age
-    False -> Left [AgeTooLow]
+  if age < 1
+    then Left [AgeTooLow]
+    else Right age
 
 nameOkay :: Name -> Either [PersonInvalid] Name
 nameOkay name =
-  case name /= "" of
-    True -> Right name
-    False -> Left [NameEmpty]
+  if name == ""
+    then Left [NameEmpty]
+    else Right name
 
 mkPerson :: Name -> Age -> ValidatePerson Person
 mkPerson name age = mkPerson' (nameOkay name) (ageOkay age)
@@ -48,7 +48,6 @@ mkPerson' _ (Left badAge) = Left badAge
 -- 2. r :: a -> f a
 -- The kind of a is *
 -- The kind of f is * -> *
--- but is that even legal???
 -- String Processing
 --------------------
 -- 1.
@@ -168,3 +167,90 @@ foldMaybes :: Maybe a -> Maybe [a] -> Maybe [a]
 foldMaybes Nothing _ = Nothing
 foldMaybes _ Nothing = Nothing
 foldMaybes (Just x) (Just xs) = Just (x : xs)
+
+-- Small library for Either
+-- 1.
+getLefts :: Either a b -> [a] -> [a]
+getLefts (Left x) acc = x : acc
+getLefts _ acc = acc
+
+lefts' :: [Either a b] -> [a]
+lefts' = foldr getLefts []
+
+-- 2.
+getRights :: Either a b -> [b] -> [b]
+getRights (Right x) acc = x : acc
+getRights _ acc = acc
+
+rights :: [Either a b] -> [b]
+rights = foldr getRights []
+
+-- 3.
+groupEithers :: Either a b -> ([a], [b]) -> ([a], [b])
+groupEithers (Left x) (lefts, rights) = (x : lefts, rights)
+groupEithers (Right x) (lefts, rights) = (lefts, x : rights)
+
+partitionEithers' :: [Either a b] -> ([a], [b])
+partitionEithers' = foldr groupEithers ([], [])
+
+-- 4.
+eitherMaybe' :: (b -> c) -> Either a b -> Maybe c
+eitherMaybe' f (Left x) = Nothing
+eitherMaybe' f (Right x) = Just (f x)
+
+-- 5.
+either' :: (a -> c) -> (b -> c) -> Either a b -> c
+either' f _ (Left x) = f x
+either' _ f (Right x) = f x
+
+-- 6.
+eitherMaybe'' :: (b -> c) -> Either a b -> Maybe c
+eitherMaybe'' f (Left x) = Nothing
+eitherMaybe'' f (Right x) = Just (either' id f (Right x))
+
+-- Unfolds
+-- Why bother?
+-- :t iterate is iterate :: (a -> a) -> a -> [a]
+-- :t unfoldr is (b -> Maybe (a, b)) -> b -> [a]
+-- Write your own iterate and unfoldr
+-- 1.
+myIterate :: (a -> a) -> a -> [a]
+myIterate f currentIteration =
+  let nextIteration = f currentIteration
+   in currentIteration : myIterate f nextIteration
+
+-- 2.
+myUnfoldr :: (b -> Maybe (a, b)) -> b -> [a]
+myUnfoldr f currentIteration =
+  case f currentIteration of
+    Nothing -> []
+    Just (x, y) -> x : myUnfoldr f y
+
+-- 3.
+betterIterate :: (a -> a) -> a -> [a]
+betterIterate f = myUnfoldr (\x -> Just (x, f x))
+
+-- Finally something other than  list!
+data BinaryTree a
+  = Leaf
+  | Node (BinaryTree a)
+         a
+         (BinaryTree a)
+  deriving (Eq, Ord, Show)
+
+-- 1.
+unfold :: (a -> Maybe (a, b, a)) -> a -> BinaryTree b
+unfold f current =
+  case f current of
+    Just (x1, y, x2) -> Node (unfold f x1) y (unfold f x2)
+    Nothing -> Leaf
+
+-- 2.
+growUntil :: Integer -> Integer -> Maybe (Integer, Integer, Integer)
+growUntil x y =
+  if y > x
+    then Nothing
+    else Just (y + 1, y, y + 1)
+
+treeBuild :: Integer -> BinaryTree Integer
+treeBuild n = unfold (growUntil n) 0
