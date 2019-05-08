@@ -205,6 +205,7 @@ countTaps = foldr (\(_, presses) acc -> acc + presses) 0
 totalTaps = map (countTaps . stringToTaps) convo
 
 -- 4. What was the most popular letter. What was its cost?
+sumValues :: a -> Int -> Int -> Int
 sumValues _ b c = b + c
 
 getLetterCounts char = Map.insertWithKey sumValues char 1
@@ -218,12 +219,79 @@ getMostPopularLetters char count acc@(candidates, candidateCount)
 mostPopularLettersByCount :: String -> (String, Int)
 mostPopularLettersByCount "" = ("", 0)
 mostPopularLettersByCount xs =
-  let charCounts = foldr getLetterCounts Map.empty (filter (`elem` alphabet) xs)
+  let charCounts =
+        foldr
+          getLetterCounts
+          Map.empty
+          (filter (`elem` alphabet ++ ['A' .. 'Z']) xs)
       mostPopularWithCount =
         Map.foldrWithKey getMostPopularLetters ("", 0) charCounts
    in mostPopularWithCount
--- fst.
--- mostPopular = map mostPopularLettersByCount convo
--- foldrWithKey :: (k -> a -> b -> b) -> b -> Map k a -> b
+
+characterCost :: Char -> (Char, Presses)
+characterCost char =
+  let charIsUpper = isUpper char
+      effectiveChar = toLower char
+   in case find
+             (\(KeyChars key chars) -> effectiveChar `elem` chars)
+             allKeyChars of
+        Just (KeyChars matchedKey matchedChars) ->
+          case mFindIndex matchedChars effectiveChar of
+            Just index ->
+              if charIsUpper
+                then (char, index + 1 + 1)
+                else (char, index + 1)
+            Nothing -> (char, 0)
+        Nothing -> (char, 0)
+
+mostPopular = map (fst . mostPopularLettersByCount) convo
+
+mostPopularWithCost = map (map characterCost) mostPopular
+
 -- 5. What was most popular letter over all?
+getCoolestLtrs :: [String] -> String
+getCoolestLtrs str =
+  let mostPopularByCount =
+        (map
+           (mostPopularLettersByCount . (filter (\x -> isUpper x || isLower x)))
+           str)
+      theAnswer =
+        foldr
+          (\(mostPopular, occurrences) acc ->
+             (foldr
+                (\char -> Map.insertWithKey sumValues char occurrences)
+                acc
+                mostPopular))
+          Map.empty
+          mostPopularByCount
+   in fst $ Map.foldrWithKey getMostPopularLetters ("", 0) theAnswer
+
+coolestLtrs = getCoolestLtrs convo
+
 -- What was most popular word?
+convoWords =
+  map (filter (`elem` ['a' .. 'z'] ++ ['0' .. '9'])) .
+  map (map toLower) . concatMap (words) $
+  convo
+
+tallyList :: (Ord a) => [a] -> Map.Map a Int
+tallyList = foldr (\wurd -> Map.insertWithKey sumValues wurd 1) Map.empty
+
+safeHead :: [a] -> Maybe a
+safeHead [] = Nothing
+safeHead (x:xs) = Just x
+
+getHighestFold :: a -> Int -> ([a], Int) -> ([a], Int)
+getHighestFold key count acc@(candidates, candidateCount)
+  | count == candidateCount = (key : candidates, candidateCount)
+  | count > candidateCount = (key : [], count)
+  | count < candidateCount = acc
+
+getMostPopularInTally :: (Ord a) => Map.Map a Int -> [a]
+getMostPopularInTally tally =
+  fst $ Map.foldrWithKey getHighestFold ([], 0) tally
+
+mostPopularInList :: (Ord a) => [a] -> [a]
+mostPopularInList = getMostPopularInTally . tallyList
+
+coolestWord = mostPopularInList convoWords
