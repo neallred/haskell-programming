@@ -1,6 +1,8 @@
 module Chapter11VignereCipher where
 
 import Data.Char
+import System.IO
+import Text.Read (readMaybe)
 
 -- ord
 -- chr
@@ -69,3 +71,43 @@ biumvirate x padString =
   , makeCaesar (abs x) (toStringPad padString))
 
 (uncaesar13, caesar13) = biumvirate 13 ""
+
+getIntFromUser :: IO Int
+getIntFromUser = do
+  userInput <- getLine
+  case readMaybe userInput of
+    Nothing -> do
+      putStrLn "(integer input required, please try again)"
+      getIntFromUser
+    Just n -> return n
+
+getYesNo :: IO Bool
+getYesNo = do
+  char <- getChar
+  case char of
+    'y' -> do
+      putStrLn ""
+      return True
+    'n' -> do
+      putStrLn ""
+      return False
+    _ -> do
+      putStrLn "\nPlease enter \"y\" for encode, \"n\" for decode"
+      getYesNo
+
+main :: IO ()
+main = do
+  hSetBuffering stdout NoBuffering
+  putStrLn "Enter a shift amount:"
+  shiftAmount <- getIntFromUser
+  putStrLn "Enter a pad:"
+  pad <- getLine
+  putStrLn "Should your input message be encoded (y) or decoded (n)?"
+  shouldEncode <- getYesNo
+  putStrLn "Enter message for ciphery:"
+  messageForCiphery <- getLine
+  putStrLn $
+    let (decode, encode) = biumvirate shiftAmount pad
+     in if shouldEncode
+          then encode messageForCiphery
+          else decode messageForCiphery
