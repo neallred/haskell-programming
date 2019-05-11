@@ -2,6 +2,7 @@ module Chapter14 where
 -- Intermission: Short Exercise
 -------------------------------
 -- 1. Write exercises for recursive integer multiplication
+-- See testing/chapter-14-recursive-multiplication.hs
 -- See addition/Addition.hs
 -- Validating Numbers into Words
 --------------------------------
