@@ -9,4 +9,4 @@ module Chapter14 where
 -- 1. See testing/WordNumberTest.hs
 -- Using QuickCheck
 -------------------
--- See tests/UsingQuickCheck.hs
+-- See testing/UsingQuickCheck.hs
