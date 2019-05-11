@@ -10,7 +10,7 @@ maintainer:          neallred@gmail.com
 copyright:           2018 Nathaniel Allred
 category:            Testing
 build-type:          Simple
-cabal-version:       >=1.10
+cabal-version:       >=1.12
 
 library
   exposed-modules:     Addition
