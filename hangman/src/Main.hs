@@ -75,26 +75,26 @@ fillInCharacter (Puzzle word filledInSoFar s) c =
         else guessChar
     newFilledInSoFar = zipWith (zipper c) word filledInSoFar
 
+messageAlreadyGuessed =
+  "You already guessed that character, pick something else!"
+
+messageInWord =
+  "This character was in the word, filling in the word accordingly."
+
+messageNotInWord = "This character wasn't in the word, try again."
+
 handleGuess :: Puzzle -> Char -> IO Puzzle
 handleGuess puzzle guess = do
   putStrLn $ "Your guess was: " ++ [guess]
   case (charInWord puzzle guess, alreadyGuessed puzzle guess) of
     (_, True) -> do
-      putStrLn
-        "You already guessed that\
-                 \ character, pick \
-                 \ something else!"
+      putStrLn messageAlreadyGuessed
       return puzzle
     (True, _) -> do
-      putStrLn
-        "This character was in the\
-                \ word, filling in the word\
-                \ accordingly"
+      putStrLn messageInWord
       return (fillInCharacter puzzle guess)
     (False, _) -> do
-      putStrLn
-        "This character wasn't in\
-                \ the word, try again."
+      putStrLn messageNotInWord
       return (fillInCharacter puzzle guess)
 
 boundedInt :: Int -> Int -> Int -> Int

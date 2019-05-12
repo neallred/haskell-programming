@@ -1,12 +1,19 @@
 module Chapter14 where
 -- Intermission: Short Exercise
--------------------------------
 -- 1. Write exercises for recursive integer multiplication
 -- See testing/chapter-14-recursive-multiplication.hs
 -- See addition/Addition.hs
 -- Validating Numbers into Words
---------------------------------
 -- 1. See testing/WordNumberTest.hs
 -- Using QuickCheck
 -------------------
 -- See testing/UsingQuickCheck.hs
+-- Failure
+----------
+-- See testing/UsingQuickCheck.hs
+-- Idempotence
+--------------
+-- See testing/UsingQuickCheck.hs
+-- Hangman testing
+------------------
+-- See hangman/src/Test.hs
