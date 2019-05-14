@@ -1,6 +1,8 @@
 module HangmanTest where
 
+import Data.Maybe (isNothing)
 import Main
+import Test.Hspec
 import Test.QuickCheck
 
 arbitraryString :: Gen String
@@ -31,7 +33,7 @@ countJust =
   foldr
     (\curr acc ->
        acc +
-       if curr == Nothing
+       if isNothing curr
          then 0
          else 1)
     0
@@ -47,25 +49,30 @@ propertyPreservesPuzzle initial@(Puzzle puzzle _ _) char =
   let Puzzle newPuzzle _ _ = fillInCharacter initial char
    in newPuzzle == puzzle
 
-propertyFillPuzzle2 :: Puzzle -> Char -> Property
-propertyFillPuzzle2 init@(Puzzle (x:xs) _ _) char =
+propifiedFillPuzzle :: Puzzle -> Char -> Property
+propifiedFillPuzzle init@(Puzzle (x:xs) _ _) char =
   True ==> propertyFillsInLetters init x
-
-propertyFillPuzzle = quickCheck propertyFillPuzzle2
 
 propFillPuzzle :: IO ()
 propFillPuzzle = do
   (empty@(Puzzle str _ _):xs) <- sample' emptyPuzzleGen
   putStrLn str
+
+runAllFillInCharacters =
+  quickCheck propifiedFillPuzzle >> quickCheck propertyPreservesPuzzle >>
+  quickCheck propertyAddsGuessed
+
 -- puzzleGen = undefined
 -- puzzleGen = do
 --  (a :: String) <- arbitrary 
 --  return (Puzzle map "")a
---
---
--- 5.
--- propQuotRem :: Int -> Int -> Bool
--- propQuotRem x y = (quot x y) * y + (rem x y) == x
--- 
--- propertyQuotRem :: Int -> Int -> Property
--- propertyQuotRem x y = x /= 0 && y /= 0 ==> propQuotRem x y
+handleGuess :: IO ()
+handleGuess =
+  hspec $
+  describe "handleGuess" $ do
+    it "returns the puzzle unchanged if user guesses something already guessed" $
+      False `shouldBe` True
+    it "returns adds correct letter to list of letters filled in" $
+      False `shouldBe` True
+    it "returns adds correct letter to list of letters filled in" $
+      False `shouldBe` True
