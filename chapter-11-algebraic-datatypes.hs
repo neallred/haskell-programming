@@ -734,7 +734,7 @@ data Weekday
 -- 3. Types defined with the data keyword must begin with a capital letter
 -- 4. `g xs = xs !! (length xs - 1) delivers the final element of xs (if it has any, else it bottoms)
 -- Ciphers
--- see chapter-11-vignere-cipher.hs
+-- see cipher/src/LibCipher.hs
 -- As-patterns
 -- 1.
 isSubseqOf :: (Eq a) => [a] -> [a] -> Bool

@@ -66,13 +66,23 @@ runAllFillInCharacters =
 -- puzzleGen = do
 --  (a :: String) <- arbitrary 
 --  return (Puzzle map "")a
-handleGuess :: IO ()
-handleGuess =
+puzzle = Puzzle "trumm" [Nothing, Nothing, Just 'u', Nothing, Nothing] "u"
+
+handleGuessSuite :: IO ()
+handleGuessSuite =
   hspec $
   describe "handleGuess" $ do
-    it "returns the puzzle unchanged if user guesses something already guessed" $
-      False `shouldBe` True
-    it "returns adds correct letter to list of letters filled in" $
-      False `shouldBe` True
-    it "returns adds correct letter to list of letters filled in" $
-      False `shouldBe` True
+    it "returns the puzzle unchanged if user guesses something already guessed" $ do
+      actual <- handleGuess puzzle 'u'
+      actual `shouldBe` puzzle
+    it "adds correct letter to list of letters filled in and guessed" $ do
+      actual <- handleGuess puzzle 'm'
+      let expectedPuzzle =
+            Puzzle "trumm" [Nothing, Nothing, Just 'u', Just 'm', Just 'm'] "mu"
+      actual `shouldBe` expectedPuzzle
+    it
+      "adds correct letter to list of letters guessed but not to list of filled in" $ do
+      actual <- handleGuess puzzle 'a'
+      let expectedPuzzle =
+            Puzzle "trumm" [Nothing, Nothing, Just 'u', Nothing, Nothing] "au"
+      actual `shouldBe` expectedPuzzle

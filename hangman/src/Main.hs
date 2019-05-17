@@ -47,6 +47,7 @@ data Puzzle =
   Puzzle String
          [Maybe Char]
          String
+  deriving (Eq)
 
 renderPuzzleChar :: Maybe Char -> Char
 renderPuzzleChar = fromMaybe '_'
@@ -54,7 +55,8 @@ renderPuzzleChar = fromMaybe '_'
 instance Show Puzzle where
   show puzzle@(Puzzle _ discovered guessed) =
     intersperse ' ' (fmap renderPuzzleChar discovered) ++
-    " Wrong letters: " ++ wrongLetters puzzle
+    "\nWrong letters: " ++
+    wrongLetters puzzle ++ "\nLetters guessed: " ++ guessed
 
 freshPuzzle :: String -> Puzzle
 freshPuzzle xs = Puzzle xs (map (const Nothing) xs) []

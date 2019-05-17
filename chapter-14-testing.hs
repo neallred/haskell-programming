@@ -17,3 +17,6 @@ module Chapter14 where
 -- Hangman testing
 ------------------
 -- See hangman/src/Test.hs
+-- Validating ciphers
+------------------
+-- See cipher/test/Spec.hs
