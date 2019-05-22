@@ -2,7 +2,9 @@ module Main where
 
 import Control.Monad
 import Data.List.NonEmpty
-import Data.Monoid (Monoid, mappend, mempty)
+import Data.Monoid as M
+
+-- (Monoid, Product, Sum, mappend, mempty)
 import Data.Semigroup (Semigroup, (<>))
 import Test.QuickCheck
 
@@ -78,11 +80,6 @@ newtype First' a =
     }
   deriving (Eq, Show)
 
--- (Nada Only) Nada
--- Nada (Only Nada)
--- Nada (Only Nada)
--- Only (Nada Only)
--- (Only Nada) Only
 instance Semigroup (First' a) where
   (<>) (First' (Only x)) (First' (Only y)) = First' (Only x)
   (<>) (First' (Only x)) (First' Nada) = First' (Only x)
@@ -189,6 +186,72 @@ type WowThatsLong
                                                                            , Bool) -> Four String Int [[String]] ( Char
                                                                                                                  , Bool) -> Bool
 
+-- 6.
+newtype BoolConj =
+  BoolConj Bool
+  deriving (Eq, Show)
+
+instance Semigroup BoolConj where
+  (<>) (BoolConj False) _ = BoolConj False
+  (<>) _ (BoolConj False) = BoolConj False
+  (<>) _ _ = BoolConj True
+
+instance Arbitrary BoolConj where
+  arbitrary = do
+    x <- arbitrary
+    return (BoolConj x)
+
+-- 7.
+newtype BoolDisj =
+  BoolDisj Bool
+  deriving (Eq, Show)
+
+instance Semigroup BoolDisj where
+  (<>) (BoolDisj True) _ = BoolDisj True
+  (<>) _ (BoolDisj True) = BoolDisj True
+  (<>) _ _ = BoolDisj False
+
+instance Arbitrary BoolDisj where
+  arbitrary = do
+    x <- arbitrary
+    return (BoolDisj x)
+
+-- 8.
+data Or a b
+  = Fst a
+  | Snd b
+  deriving (Eq, Show)
+
+instance Semigroup (Or a b) where
+  (<>) (Snd x) _ = Snd x
+  (<>) _ (Snd y) = Snd y
+  (<>) (Fst x) (Fst y) = Fst y
+
+instance (Arbitrary a, Arbitrary b) => Arbitrary (Or a b) where
+  arbitrary = do
+    x <- arbitrary
+    y <- arbitrary
+    frequency [(1, return (Fst x)), (1, return (Snd y))]
+
+type OrInts = Or Int Int
+
+type OrIntsTest = OrInts -> OrInts -> OrInts -> Bool
+
+-- 9.
+newtype Combine a b =
+  Combine
+    { unCombine :: (a -> b)
+    }
+
+-- one function a -> a
+-- one function a -> b
+instance Semigroup (Combine (a -> a) (a -> b)) where
+  (<>) funF funG = funF . funG
+
+f = Combine $ \n -> M.Sum (n + 1)
+
+g = Combine $ \n -> M.Sum (n - 1)
+
 semigroupExercises :: IO ()
 semigroupExercises = do
   putStrLn "Checking Trival semigroup property:"
@@ -202,5 +265,9 @@ semigroupExercises = do
   putStrLn "Checking Three a b c semigroup property:"
   quickCheck
     (semigroupAssoc :: Three String Int [[String]] -> Three String Int [[String]] -> Three String Int [[String]] -> Bool)
-  putStrLn "Checking Four a b c d semigroup property:"
-  quickCheck (semigroupAssoc :: WowThatsLong)
+  putStrLn "Checking BoolConj semigroup property:"
+  quickCheck (semigroupAssoc :: BoolConj -> BoolConj -> BoolConj -> Bool)
+  putStrLn "Checking BoolDisj semigroup property:"
+  quickCheck (semigroupAssoc :: BoolDisj -> BoolDisj -> BoolDisj -> Bool)
+  putStrLn "Checking Or a b semigroup property:"
+  quickCheck (semigroupAssoc :: OrIntsTest)
