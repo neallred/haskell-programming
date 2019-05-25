@@ -2,11 +2,12 @@ module Main where
 
 import Control.Monad
 import Data.List.NonEmpty
-import Data.Monoid as M
+import Data.Monoid (Monoid, Product, Sum, mappend, mempty)
 
 -- (Monoid, Product, Sum, mappend, mempty)
 import Data.Semigroup (Semigroup, (<>))
 import Test.QuickCheck
+import Test.QuickCheck.Function (Fun, applyFun)
 
 -- import Test.QuickCheck.Gen
 -- import Test.QuickCheck.Property
@@ -34,6 +35,7 @@ main = do
   putStrLn "testing right identity:"
   quickCheck (monoidRightIdentity :: First' String -> Bool)
   semigroupExercises
+  monoidExercises
 
 -- asc :: Eq a => (a -> a -> a) -> a -> a -> Bool
 -- asc (<>) a b c = a <> (b <> c) == (a <> b) <> c
@@ -135,8 +137,7 @@ instance Semigroup (Two a b) where
 twoGen :: (Arbitrary a, Arbitrary b) => Gen (Two a b)
 twoGen = do
   x <- arbitrary
-  y <- arbitrary
-  return (Two x y)
+  Two x <$> arbitrary
 
 instance (Arbitrary a, Arbitrary b) => Arbitrary (Two a b) where
   arbitrary = twoGen
@@ -153,8 +154,7 @@ threeGen :: (Arbitrary a, Arbitrary b, Arbitrary c) => Gen (Three a b c)
 threeGen = do
   x <- arbitrary
   y <- arbitrary
-  z <- arbitrary
-  return (Three x y z)
+  Three x y <$> arbitrary
 
 instance (Arbitrary a, Arbitrary b, Arbitrary c) =>
          Arbitrary (Three a b c) where
@@ -174,8 +174,7 @@ fourGen = do
   w <- arbitrary
   x <- arbitrary
   y <- arbitrary
-  z <- arbitrary
-  return (Four w x y z)
+  Four w x y <$> arbitrary
 
 instance (Arbitrary a, Arbitrary b, Arbitrary c, Arbitrary d) =>
          Arbitrary (Four a b c d) where
@@ -197,9 +196,7 @@ instance Semigroup BoolConj where
   (<>) _ _ = BoolConj True
 
 instance Arbitrary BoolConj where
-  arbitrary = do
-    x <- arbitrary
-    return (BoolConj x)
+  arbitrary = BoolConj <$> arbitrary
 
 -- 7.
 newtype BoolDisj =
@@ -212,9 +209,7 @@ instance Semigroup BoolDisj where
   (<>) _ _ = BoolDisj False
 
 instance Arbitrary BoolDisj where
-  arbitrary = do
-    x <- arbitrary
-    return (BoolDisj x)
+  arbitrary = BoolDisj <$> arbitrary
 
 -- 8.
 data Or a b
@@ -240,17 +235,80 @@ type OrIntsTest = OrInts -> OrInts -> OrInts -> Bool
 -- 9.
 newtype Combine a b =
   Combine
-    { unCombine :: (a -> b)
+    { unCombine :: a -> b
     }
 
--- one function a -> a
--- one function a -> b
-instance Semigroup (Combine (a -> a) (a -> b)) where
-  (<>) funF funG = funF . funG
+instance (Semigroup b) => Semigroup (Combine a b) where
+  (<>) (Combine f) (Combine g) = Combine (f <> g)
 
-f = Combine $ \n -> M.Sum (n + 1)
+combineAssoc ::
+     (Eq b, Semigroup s)
+  => (Fun a b -> s)
+  -> (s -> a -> b)
+  -> a
+  -> Fun a b
+  -> Fun a b
+  -> Fun a b
+  -> Bool
+combineAssoc wrap eval point f g h =
+  eval (s1 <> (s2 <> s3)) point == eval ((s1 <> s2) <> s3) point
+  where
+    s1 = wrap f
+    s2 = wrap g
+    s3 = wrap h
 
-g = Combine $ \n -> M.Sum (n - 1)
+-- 10.
+newtype Comp a =
+  Comp
+    { unComp :: a -> a
+    }
+
+instance Semigroup (Comp a) where
+  (<>) (Comp f) (Comp g) = Comp (f . g)
+
+compAssoc ::
+     (Eq a, Semigroup s)
+  => (Fun a a -> s)
+  -> (s -> a -> a)
+  -> a
+  -> Fun a a
+  -> Fun a a
+  -> Fun a a
+  -> Bool
+compAssoc wrap eval x f g h =
+  eval ((f' <> g') <> h') x == eval (f' <> (g' <> h')) x
+  where
+    f' = wrap f
+    g' = wrap g
+    h' = wrap h
+
+-- 11.
+data Validation a b
+  = Failure' a
+  | Success' b
+  deriving (Eq, Show)
+
+instance (Arbitrary a, Arbitrary b) => Arbitrary (Validation a b) where
+  arbitrary =
+    frequency [(1, fmap Failure' arbitrary), (1, fmap Success' arbitrary)]
+
+-- frequency, not this pattern.
+instance Semigroup a => Semigroup (Validation a b) where
+  (<>) (Success' x) _ = Success' x
+  (<>) (Failure' x) (Success' y) = Success' y
+  (<>) (Failure' x) (Failure' y) = Failure' (x <> y)
+
+validationExercise = do
+  let failure :: String -> Validation String Int
+      failure = Failure'
+      success :: Int -> Validation String Int
+      success = Success'
+  print $ success 1 <> failure "blah"
+  print $ failure "woot" <> failure "blah"
+  print $ success 1 <> success 2
+  print $ failure "woot" <> success 2
+
+type SumGen = Fun (Sum Int) (Sum Int)
 
 semigroupExercises :: IO ()
 semigroupExercises = do
@@ -271,3 +329,31 @@ semigroupExercises = do
   quickCheck (semigroupAssoc :: BoolDisj -> BoolDisj -> BoolDisj -> Bool)
   putStrLn "Checking Or a b semigroup property:"
   quickCheck (semigroupAssoc :: OrIntsTest)
+  putStrLn "Checking Combine a b semigroup property:"
+  quickCheck
+    (combineAssoc (Combine . applyFun) unCombine :: Int -> Fun Int (Sum Int) -> Fun Int (Sum Int) -> Fun Int (Sum Int) -> Bool)
+  putStrLn "Checking Comp a a semigroup property:"
+  quickCheck
+    (compAssoc (Comp . applyFun) unComp :: Sum Int -> SumGen -> SumGen -> SumGen -> Bool)
+  putStrLn "Checking Validation a b semigroup property:"
+  quickCheck
+    (semigroupAssoc :: Validation String Int -> Validation String Int -> Validation String Int -> Bool)
+
+--  quickCheck (semigroupAssoc :: CombineTest Int Int)
+-- Monoid exercises
+-- 1.
+instance Monoid Trivial where
+  mempty = Trivial
+  mappend = (<>)
+
+type TrivAssoc = Trivial -> Trivial -> Trivial -> Bool
+
+monoidExercises :: IO ()
+monoidExercises = do
+  let sa = semigroupAssoc
+      mli = monoidLeftIdentity
+      mri = monoidRightIdentity
+  putStrLn "Checking Trivial monoid properties"
+  quickCheck (sa :: TrivAssoc)
+  quickCheck (mli :: Trivial -> Bool)
+  quickCheck (mri :: Trivial -> Bool)
