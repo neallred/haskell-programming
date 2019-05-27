@@ -1,16 +1,15 @@
+{-# LANGUAGE TupleSections #-}
+
 module Main where
 
 import Control.Monad
 import Data.List.NonEmpty
-import Data.Monoid (Monoid, Product, Sum, mappend, mempty)
+import Data.Monoid (Monoid, Sum, mappend, mempty)
 
--- (Monoid, Product, Sum, mappend, mempty)
 import Data.Semigroup (Semigroup, (<>))
 import Test.QuickCheck
 import Test.QuickCheck.Function (Fun, applyFun)
 
--- import Test.QuickCheck.Gen
--- import Test.QuickCheck.Property
 main :: IO ()
 main = do
   putStrLn "Testing monoidal properties:"
@@ -37,8 +36,6 @@ main = do
   semigroupExercises
   monoidExercises
 
--- asc :: Eq a => (a -> a -> a) -> a -> a -> Bool
--- asc (<>) a b c = a <> (b <> c) == (a <> b) <> c
 monoidAssoc :: (Eq m, Semigroup m, Monoid m) => m -> m -> m -> Bool
 monoidAssoc a b c = (a <> (b <> c)) == ((a <> b) <> c)
 
@@ -117,8 +114,8 @@ newtype Identity a =
   Identity a
   deriving (Eq, Show)
 
-instance Semigroup (Identity a) where
-  (<>) (Identity a) (Identity b) = Identity a
+instance Semigroup a => Semigroup (Identity a) where
+  (<>) (Identity a) (Identity b) = Identity (a <> b)
 
 instance Arbitrary a => Arbitrary (Identity a) where
   arbitrary = fmap Identity arbitrary
@@ -131,8 +128,8 @@ data Two a b =
 pairToTwo :: (a, b) -> Two a b
 pairToTwo (x, y) = Two x y
 
-instance Semigroup (Two a b) where
-  (<>) (Two x1 _) (Two _ y2) = Two x1 y2
+instance (Semigroup a, Semigroup b) => Semigroup (Two a b) where
+  (<>) (Two x1 y1) (Two x2 y2) = Two (x1 <> x2) (y1 <> y2)
 
 twoGen :: (Arbitrary a, Arbitrary b) => Gen (Two a b)
 twoGen = do
@@ -319,7 +316,7 @@ semigroupExercises = do
     (semigroupAssoc :: Identity String -> Identity String -> Identity String -> Bool)
   putStrLn "Checking Two a b semigroup property:"
   quickCheck
-    (semigroupAssoc :: Two String Int -> Two String Int -> Two String Int -> Bool)
+    (semigroupAssoc :: Two String (Sum Int) -> Two String (Sum Int) -> Two String (Sum Int) -> Bool)
   putStrLn "Checking Three a b c semigroup property:"
   quickCheck
     (semigroupAssoc :: Three String Int [[String]] -> Three String Int [[String]] -> Three String Int [[String]] -> Bool)
@@ -339,7 +336,6 @@ semigroupExercises = do
   quickCheck
     (semigroupAssoc :: Validation String Int -> Validation String Int -> Validation String Int -> Bool)
 
---  quickCheck (semigroupAssoc :: CombineTest Int Int)
 -- Monoid exercises
 -- 1.
 instance Monoid Trivial where
@@ -347,6 +343,128 @@ instance Monoid Trivial where
   mappend = (<>)
 
 type TrivAssoc = Trivial -> Trivial -> Trivial -> Bool
+
+-- 2.
+instance (Monoid a) => Monoid (Identity a) where
+  mempty = Identity mempty
+  mappend = (<>)
+
+type IdentityAssoc
+   = Identity String -> Identity String -> Identity String -> Bool
+
+-- 3.
+instance (Monoid a, Monoid b) => Monoid (Two a b) where
+  mempty = Two mempty mempty
+  mappend = (<>)
+
+type TwoAssoc
+   = Two (Sum Int) String -> Two (Sum Int) String -> Two (Sum Int) String -> Bool
+
+-- 4.
+instance Monoid BoolConj where
+  mempty = BoolConj True
+  mappend = (<>)
+
+type Bool4 = BoolConj -> BoolConj -> BoolConj -> Bool
+
+-- 5.
+instance Monoid BoolDisj where
+  mempty = BoolDisj False
+  mappend = (<>)
+
+type BoolDisjAssoc = BoolDisj -> BoolDisj -> BoolDisj -> Bool
+
+-- 6.
+instance (Monoid b) => Monoid (Combine a b) where
+  mempty = Combine $ const mempty
+  mappend = (<>)
+
+combineLeftIdentity ::
+     (Eq b, Monoid m) => (Fun a b -> m) -> (m -> a -> b) -> a -> Fun a b -> Bool
+combineLeftIdentity wrap eval point f = eval (mempty <> m) point == eval m point
+  where
+    m = wrap f
+
+combineRightIdentity ::
+     (Eq b, Monoid m) => (Fun a b -> m) -> (m -> a -> b) -> a -> Fun a b -> Bool
+combineRightIdentity wrap eval point f =
+  eval (m <> mempty) point == eval m point
+  where
+    m = wrap f
+
+combineMonoidAssoc ::
+     (Eq b, Semigroup m, Monoid m)
+  => (Fun a b -> m)
+  -> (m -> a -> b)
+  -> a
+  -> Fun a b
+  -> Fun a b
+  -> Fun a b
+  -> Bool
+combineMonoidAssoc wrap eval point f g h =
+  eval (m1 <> (m2 <> m3)) point == eval ((m1 <> m2) <> m3) point
+  where
+    m1 = wrap f
+    m2 = wrap g
+    m3 = wrap h
+
+-- 7.
+instance (Monoid a) => Monoid (Comp a) where
+  mempty = Comp id
+  mappend = (<>)
+
+compAssocMonoid ::
+     (Eq a, Semigroup m, Monoid m)
+  => (Fun a a -> m)
+  -> (m -> a -> a)
+  -> a
+  -> Fun a a
+  -> Fun a a
+  -> Fun a a
+  -> Bool
+compAssocMonoid wrap eval x f g h =
+  eval ((f' <> g') <> h') x == eval (f' <> (g' <> h')) x
+  where
+    f' = wrap f
+    g' = wrap g
+    h' = wrap h
+
+-- 8.
+newtype Mem s a =
+  Mem
+    { runMem :: s -> (a, s)
+    }
+
+instance (Semigroup a, Monoid a) => Semigroup (Mem s a) where
+  (<>) x y =
+    let partialX = runMem x
+        partialY = runMem y
+        f s =
+          let (a1, s2) = partialX s
+              (a2, s3) = partialY s2
+           in (a1 <> a2, s3)
+     in Mem f
+
+instance Monoid a => Monoid (Mem s a) where
+  mempty = Mem (mempty, )
+  -- mempty = Mem $ \s -> (mempty, s)
+  mappend = (<>)
+
+fMem = Mem $ \s -> ("hi", s + 1)
+
+(Mem hi) = Mem $ \s -> ("hi", s + 1)
+
+fMem2 = Mem $ \s -> ("forty-two", s * 31)
+
+exampleStateness = do
+  let rmzero = runMem mempty 0
+      rmleft = runMem (fMem <> mempty) 0
+      rmright = runMem (mempty <> fMem) 0
+  print rmleft -- ("hi", 1)
+  print rmright -- ("hi", 1)
+  print (rmzero :: (String, Int)) -- ("hi", 0)
+  print $ rmleft == runMem fMem 0 -- True
+  print $ rmright == runMem fMem 0 -- True
 
 monoidExercises :: IO ()
 monoidExercises = do
@@ -357,3 +475,37 @@ monoidExercises = do
   quickCheck (sa :: TrivAssoc)
   quickCheck (mli :: Trivial -> Bool)
   quickCheck (mri :: Trivial -> Bool)
+  putStrLn "Checking Identity a monoid properties"
+  quickCheck (semigroupAssoc :: IdentityAssoc)
+  quickCheck (monoidLeftIdentity :: Identity String -> Bool)
+  quickCheck (monoidRightIdentity :: Identity String -> Bool)
+  putStrLn "Checking BoolConj Bool monoid properties"
+  quickCheck (semigroupAssoc :: Bool4)
+  quickCheck (monoidLeftIdentity :: BoolConj -> Bool)
+  quickCheck (monoidRightIdentity :: BoolConj -> Bool)
+  putStrLn "Checking Two a b monoid properties"
+  quickCheck (semigroupAssoc :: TwoAssoc)
+  quickCheck (monoidLeftIdentity :: Two (Sum Int) String -> Bool)
+  quickCheck (monoidRightIdentity :: Two (Sum Int) String -> Bool)
+  putStrLn "Checking BoolDisj monoid properties"
+  quickCheck (semigroupAssoc :: BoolDisjAssoc)
+  quickCheck (monoidLeftIdentity :: BoolDisj -> Bool)
+  quickCheck (monoidRightIdentity :: BoolDisj -> Bool)
+  putStrLn "Checking Combine a b monoid properties"
+  quickCheck
+    (combineMonoidAssoc (Combine . applyFun) unCombine :: Int -> Fun Int (Sum Int) -> Fun Int (Sum Int) -> Fun Int (Sum Int) -> Bool)
+  quickCheck
+    (combineLeftIdentity (Combine . applyFun) unCombine :: Int -> Fun Int (Sum Int) -> Bool)
+  quickCheck
+    (combineRightIdentity (Combine . applyFun) unCombine :: Int -> Fun Int (Sum Int) -> Bool)
+  putStrLn "Checking Comp a monoid properties"
+  quickCheck
+    (compAssocMonoid (Comp . applyFun) unComp :: Sum Int -> Fun (Sum Int) (Sum Int) -> Fun (Sum Int) (Sum Int) -> Fun (Sum Int) (Sum Int) -> Bool)
+  quickCheck
+    (combineLeftIdentity (Comp . applyFun) unComp :: Sum Int -> Fun (Sum Int) (Sum Int) -> Bool)
+  quickCheck
+    (combineRightIdentity (Comp . applyFun) unComp :: Sum Int -> Fun (Sum Int) (Sum Int) -> Bool)
+  putStrLn "Checking Mem s a monoid properties"
+--  quickCheck (monoidAssoc :: Mem Int String -> Mem Int String -> Mem Int String -> Bool)
+--  Does not have Eq instance. Does it make sense for it to? I don't think so.
+--  Functions do not have an Eq instance, and you construct a Mem by passing in a function.
