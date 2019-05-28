@@ -65,5 +65,4 @@ madlibbinBetter e adv noun adj =
     , " wife."
     ]
 -- Chapter Exercises:
--- Semigroup Exercises
 -- See chapter15/src/Main.hs
