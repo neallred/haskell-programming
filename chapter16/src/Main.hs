@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleInstances #-}
+
 module Main where
 
 import Data.Char
@@ -8,6 +10,12 @@ import Test.QuickCheck
 labelDoChunk :: String -> IO ()
 labelDoChunk str =
   putStrLn ("\n" ++ str ++ ":\n" ++ map (const '-') str ++ "-\n")
+
+labelId :: String -> IO ()
+labelId x = putStrLn ("testing identity law for " ++ x)
+
+labelComp :: String -> IO ()
+labelComp x = putStrLn ("testing composability law for " ++ x)
 
 data Two a b =
   Two a b
@@ -234,8 +242,87 @@ sumExercise = do
 -- operating on that type
 -- And even if you tried, you would be modifying structure, which breaks functor laws.
 --
+-- Chapter Exercises
+-- Write Functor Instances
+-- 1.
+data Quant a b
+  = Finance
+  | Desk a
+  | Bloor b
+  deriving (Eq, Show)
+
+instance Functor (Quant a) where
+  fmap _ Finance = Finance
+  fmap _ (Desk a) = Desk a
+  fmap f (Bloor b) = Bloor (f b)
+
+instance (Arbitrary a, Arbitrary b) => Arbitrary (Quant a b) where
+  arbitrary =
+    frequency
+      [(1, return Finance), (8, fmap Desk arbitrary), (8, fmap Bloor arbitrary)]
+
+-- 2.
+data K a b =
+  K a
+  deriving (Eq, Show)
+
+instance Functor (K a) where
+  fmap _ (K x) = K x
+
+instance (Arbitrary a, Arbitrary b) => Arbitrary (K a b) where
+  arbitrary = fmap K arbitrary
+
+-- interesting, couldn't do functorCompose on K [Int] Char or K [Int] ()
+-- Because the types have to line up for the functions being composed,
+-- even if in the functor instance there is NO way that the functions can ever be applied to the phantom type
+-- 3.
+newtype Flip f a b =
+  Flip (f b a)
+  deriving (Eq, Show)
+
+newtype K' a b =
+  K' a
+
+instance Functor (Flip K' a) where
+  fmap = undefined
+
+-- 9.
+data List a
+  = Nil
+  | Cons a (List a)
+  deriving (Eq, Show)
+
+instance Functor List where
+  fmap _ Nil = Nil
+  fmap f (Cons x xs) = Cons (f x) (fmap f xs)
+
+-- instance (Arbitrary a) => Arbitrary (List a) where
+--   arbitrary = do
+--     let bob = fmap Cons arbitrary
+--     frequency [(1, return Nil), (20, ((fmap Cons arbitrary) Nil))]
+functorInstances :: IO ()
+functorInstances = do
+  labelDoChunk "More Functor Instances"
+  -- 1.
+  labelId "Quant Bool String"
+  quickCheck (functorIdentity :: Quant Bool String -> Bool)
+  labelComp "Quant Bool String"
+  quickCheck (functorCompose (++ " ") tail :: Quant Bool String -> Bool)
+  -- 2.
+  labelId "K [Int] Char"
+  quickCheck (functorIdentity :: K [Int] Char -> Bool)
+  labelComp "K [Int] [Int]"
+  quickCheck
+    (functorCompose (fmap (+ 1)) (fmap (* 42)) :: K [Int] [Int] -> Bool)
+  -- 9.
+  labelId "List Int"
+  -- quickCheck (functorIdentity :: List Int -> Bool)
+  labelComp "List Int"
+  -- quickCheck (functorCompose (* 9001) (* 42) :: List Int -> Bool)
+
 main :: IO ()
 main = do
   instancesOfFuncExercises
   possiblyExercise
   sumExercise
+  functorInstances
