@@ -282,9 +282,103 @@ newtype Flip f a b =
 
 newtype K' a b =
   K' a
+  deriving (Eq, Show)
 
+-- I think this is really a "b", and that "b" while a is not is now witnessed??
 instance Functor (Flip K' a) where
-  fmap = undefined
+  fmap f (Flip (K' x)) = Flip (K' (f x))
+
+instance (Arbitrary b) => Arbitrary (Flip K' a b) where
+  arbitrary = do
+    x <- arbitrary
+    return (Flip (K' x))
+
+-- 4.
+data EvilGoateeConst a b =
+  GoatyConst b
+  deriving (Eq, Show)
+
+instance Functor (EvilGoateeConst a) where
+  fmap f (GoatyConst x) = GoatyConst (f x)
+
+instance (Arbitrary b) => Arbitrary (EvilGoateeConst a b) where
+  arbitrary = fmap GoatyConst arbitrary
+
+-- 5.
+data LiftItOut f a =
+  LiftItOut (f a)
+  deriving (Eq, Show)
+
+instance (Functor f) => Functor (LiftItOut f) where
+  fmap f (LiftItOut functor) = LiftItOut (fmap f functor)
+
+-- genLiftItOut :: (Functor f, Arbitrary a) => Gen (LiftItOut f a)
+-- genLiftItOut = LiftItOut ((arbitrary :: Gen (Maybe Int)) arbitrary)
+--frequency [(1, return Nil), (20, Cons <$> arbitrary <*> myList)]
+-- instance (Functor f, Arbitrary a) => Arbitrary (LiftItOut f a) where
+--   arbitrary = do
+--     let trumm f a = f a
+--     x <- arbitrary
+--     y <- arbitrary
+--     let plz = x y
+--     return (LiftItOut plz)
+-- instance (Functor f, Arbitrary a) => Arbitrary (LiftItOut f a) where
+--   arbitrary = do
+--     x <- arbitrary
+--     y <- arbitrary
+--     let duzntwrk = fmap y ((fmap x) LiftItOut)
+--     duzntwrk
+--    return duzntwrk
+-- this type checks but does not do anything useful, seems to call itself infinitely
+--  arbitrary = do
+--    x <- arbitrary
+--    return x
+--
+--  Close, unless its totaly just depending on the call to itself doing all the work.
+--  gives               LiftItOut Gen (LiftItOut f a)
+--  but needs to be     Gen (LiftItOut f a)
+--  arbitrary = do
+--    x <- arbitrary
+--    ((fmap x) (LiftItOut (arbitrary)))
+--   arbitrary = do
+--     x <- arbitrary
+--     return ((fmap x) (LiftItOut (arbitrary)))
+-- arbitrary = return ((fmap arbitrary) (LiftItOut (arbitrary)))
+--  arbitrary = return (LiftItOut ((fmap arbitrary) f))
+-- instance Functor f => Functor (Wrap f) where
+--   fmap f (Wrap fa) = Wrap (fmap f fa)
+-- instance (Functor f, Monoid a, CoArbitrary a, Arbitrary a, Arbitrary (f a)) =>
+--          Arbitrary (LiftItOut f a) where
+--   arbitrary = do
+--     x <- arbitrary
+--     return (LiftItOut (fmap mempty x))
+--
+-- 6.
+data Parappa f g a =
+  DaWrappa (f a) (g a)
+  deriving (Eq, Show)
+
+instance (Functor f, Functor g) => Functor (Parappa f g) where
+  fmap g (DaWrappa f1 f2) = DaWrappa (fmap g f1) (fmap g f2)
+
+-- 7.
+data IgnoreOne f g a b =
+  IgnoringSomething (f a) (g b)
+  deriving (Eq, Show)
+
+instance (Functor g) => Functor (IgnoreOne f g a) where
+  fmap f (IgnoringSomething x secondFunctor) =
+    IgnoringSomething x (fmap f secondFunctor)
+
+-- instance Arbitrary (IgnoreOne f g a b) where
+--   arbitrary = IgnoringSomething
+-- 8.
+data Notorious g o a t =
+  Notorious (g o) (g a) (g t)
+  deriving (Eq, Show)
+
+instance (Functor g) => Functor (Notorious g o a) where
+  fmap g (Notorious f1 f2 f3) = Notorious f1 f2 (fmap g f3)
 
 -- 9.
 data List a
@@ -296,10 +390,47 @@ instance Functor List where
   fmap _ Nil = Nil
   fmap f (Cons x xs) = Cons (f x) (fmap f xs)
 
--- instance (Arbitrary a) => Arbitrary (List a) where
---   arbitrary = do
---     let bob = fmap Cons arbitrary
---     frequency [(1, return Nil), (20, ((fmap Cons arbitrary) Nil))]
+-- Thanks much https://begriffs.com/posts/2017-01-14-design-use-quickcheck.html
+myList :: Arbitrary a => Gen (List a)
+myList = frequency [(1, return Nil), (20, Cons <$> arbitrary <*> myList)]
+
+instance (Arbitrary a) => Arbitrary (List a) where
+  arbitrary = myList
+
+-- 10.
+data GoatLord a
+  = NoGoat
+  | OneGoat a
+  | MoreGoats (GoatLord a) (GoatLord a) (GoatLord a)
+  deriving (Eq, Show)
+
+instance Functor GoatLord where
+  fmap _ NoGoat = NoGoat
+  fmap f (OneGoat x) = OneGoat (f x)
+  fmap f (MoreGoats x y z) = MoreGoats (fmap f x) (fmap f y) (fmap f z)
+
+genGoatLord :: (Arbitrary a) => Gen (GoatLord a)
+genGoatLord =
+  frequency
+    [ (1, return NoGoat)
+    , (3, fmap OneGoat arbitrary)
+    , (2, MoreGoats <$> genGoatLord <*> genGoatLord <*> genGoatLord)
+    ]
+
+instance (Arbitrary a) => Arbitrary (GoatLord a) where
+  arbitrary = genGoatLord
+
+-- 11.
+data TalkToMe a
+  = Halt
+  | Print String a
+  | Read (String -> a)
+
+instance Functor TalkToMe where
+  fmap _ Halt = Halt
+  fmap f (Print x y) = Print x (f y)
+  fmap f (Read g) = Read (f . g)
+
 functorInstances :: IO ()
 functorInstances = do
   labelDoChunk "More Functor Instances"
@@ -314,12 +445,38 @@ functorInstances = do
   labelComp "K [Int] [Int]"
   quickCheck
     (functorCompose (fmap (+ 1)) (fmap (* 42)) :: K [Int] [Int] -> Bool)
+  -- 3.
+  labelId "Flip K' [Int] String"
+  quickCheck (functorIdentity :: Flip K' [Int] String -> Bool)
+  labelComp "Flip K' [Int] String"
+  quickCheck
+    (functorCompose (fmap toUpper) (++ "BOB") :: Flip K' [Int] String -> Bool)
+  -- 4.
+  labelId "EvilGoateeConst Bool String"
+  quickCheck (functorIdentity :: EvilGoateeConst Bool String -> Bool)
+  labelComp "EvilGoateeConst Bool String"
+  quickCheck
+    (functorCompose (fmap toUpper) (++ "BOB") :: EvilGoateeConst Bool String -> Bool)
   -- 9.
   labelId "List Int"
-  -- quickCheck (functorIdentity :: List Int -> Bool)
+  quickCheck (functorIdentity :: List Int -> Bool)
   labelComp "List Int"
-  -- quickCheck (functorCompose (* 9001) (* 42) :: List Int -> Bool)
+  quickCheck (functorCompose (* 9001) (* 42) :: List Int -> Bool)
+  -- 10.
+  labelId "GoatLord Int"
+  quickCheck (functorIdentity :: GoatLord Int -> Bool)
+  labelComp "GoatLord Int"
+  quickCheck (functorCompose (* 9001) (* 42) :: GoatLord Int -> Bool)
 
+--
+-- 5.
+--  labelId "LiftItOut Maybe String"
+--  quickCheck (functorIdentity :: LiftItOut Maybe String -> Bool)
+--  labelComp "LiftItOut Maybe String"
+--  quickCheck
+--    (functorCompose (fmap toUpper) (++ "BOB") :: LiftItOut Maybe String -> Bool)
+-- Standing questions: What is needed to generate Arbitrary instances for arbitrary functors?
+-- For arbitrary functions? Seems like you'd use CoArbitrary
 main :: IO ()
 main = do
   instancesOfFuncExercises
