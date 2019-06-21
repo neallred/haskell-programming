@@ -56,6 +56,18 @@ instance (Arbitrary a) => Arbitrary (List a) where
 instance (Eq a) => EqProp (List a) where
   (=-=) = eq
 
+newtype ZipList' a =
+  ZipList (List a)
+  deriving (Eq, Show)
+
+take' :: Int -> List a -> List a
+take' num xs
+  | num <= 0 = Nil
+  | xs == Nil = Nil
+  | otherwise =
+    let (Cons x rest) = xs
+     in Cons x (take' (num - 1) rest)
+
 main :: IO ()
 main = do
   sectionLabel "List Applicative Exercise"
@@ -65,5 +77,5 @@ main = do
 
 ziplistApplicativeExercise :: IO ()
 ziplistApplicativeExercise = do
-  sectionLabel "List Applicative Exercise"
+  sectionLabel "ZipList Applicative Exercise"
   sectionLabel "List Applicative Exercise"
