@@ -201,6 +201,8 @@ validationApplicativeExercise = do
   quickBatch $ applicative exampleSuccess
 
 -- Chapter Exercises
+-- Specialized versions
+-- 1.
 type SpecializedList = [Int]
 
 pureSpecializedList :: Int -> SpecializedList
@@ -209,8 +211,283 @@ pureSpecializedList = (: [])
 applySpecializedList :: [Int -> b] -> SpecializedList -> [b]
 applySpecializedList = (<*>)
 
+-- 2.
+type SpecializedIO = IO String
+
+pureSpecializedIO :: String -> SpecializedIO
+pureSpecializedIO = return
+
+applySpecializedIO :: IO (String -> b) -> SpecializedIO -> IO b
+applySpecializedIO = (<*>)
+
+-- 3.
+type SpecializedPair = (,) String (Sum Int)
+
+pureSpecializedPair :: Sum Int -> (String, Sum Int)
+pureSpecializedPair x = (mempty, x)
+
+applySpecializedPair :: (String, Sum Int -> b) -> SpecializedPair -> (String, b)
+applySpecializedPair = (<*>)
+
+-- 4.
+type SpecializedFunction = (->) Char
+
+type SpecializedFunction' = Char -> String
+
+-- a function Char -> String
+pureSpecializedFunction :: SpecializedFunction'
+pureSpecializedFunction = (: [])
+
+-- (<*>) :: Applicative f => f (a -> b) -> f a -> f b
+-- So a function that goes from Char to b is the output
+applySpecializedFunction :: (String -> b) -> SpecializedFunction' -> (Char -> b)
+applySpecializedFunction f g = f . g
+
+-- Make instances
+-- 1.
+data Pair a =
+  Pair a a
+  deriving (Eq, Show)
+
+instance (Semigroup a) => Semigroup (Pair a) where
+  (<>) (Pair x1 y1) (Pair x2 y2) = Pair (x1 <> x2) (y1 <> y2)
+
+instance (Monoid a) => Monoid (Pair a) where
+  mempty = Pair mempty mempty
+  mappend = (<>)
+
+instance Functor Pair where
+  fmap f (Pair x1 x2) = Pair (f x1) (f x2)
+
+instance Applicative Pair where
+  (<*>) (Pair f g) (Pair x1 x2) = Pair (f x1) (g x2)
+  pure x = Pair x x
+
+instance (Eq a) => EqProp (Pair a) where
+  (=-=) = eq
+
+instance (Arbitrary a) => Arbitrary (Pair a) where
+  arbitrary = do
+    x1 <- arbitrary
+    x2 <- arbitrary
+    return (Pair x1 x2)
+
+examplePair :: Pair (String, Product Int, Sum Int)
+examplePair = Pair ("dsdf", Product 5, Sum 2) ("asdf", Product 3, Sum 4)
+
+-- 2.
+data Two a b =
+  Two a b
+  deriving (Eq, Show)
+
+instance (Semigroup a, Semigroup b) => Semigroup (Two a b) where
+  (<>) (Two x1 y1) (Two x2 y2) = Two (x1 <> x2) (y1 <> y2)
+
+instance (Monoid a, Monoid b) => Monoid (Two a b) where
+  mempty = Two mempty mempty
+  mappend = (<>)
+
+instance Functor (Two a) where
+  fmap f (Two x y) = Two x (f y)
+
+instance (Monoid a) => Applicative (Two a) where
+  pure = Two mempty
+  (<*>) (Two x1 f) (Two x2 y) = Two (x1 <> x2) (f y)
+
+instance (Arbitrary a, Arbitrary b) => Arbitrary (Two a b) where
+  arbitrary = do
+    x1 <- arbitrary
+    x2 <- arbitrary
+    return (Two x1 x2)
+
+instance (Eq a, Eq b) => EqProp (Two a b) where
+  (=-=) = eq
+
+exampleTwo :: Two (String, Product Int, [String]) (String, String, Sum Int)
+exampleTwo = Two ("", Product 0, [""]) ("", "", Sum 0)
+
+-- 3.
+data Three a b c =
+  Three a b c
+  deriving (Eq, Show)
+
+instance (Semigroup a, Semigroup b, Semigroup c) =>
+         Semigroup (Three a b c) where
+  (<>) (Three x1 y1 z1) (Three x2 y2 z2) =
+    Three (x1 <> x2) (y1 <> y2) (z1 <> z2)
+
+instance (Monoid a, Monoid b, Monoid c) => Monoid (Three a b c) where
+  mempty = Three mempty mempty mempty
+  mappend = (<>)
+
+instance Functor (Three a b) where
+  fmap f (Three x y z) = Three x y (f z)
+
+instance (Monoid a, Monoid b) => Applicative (Three a b) where
+  pure = Three mempty mempty
+  (<*>) (Three x1 y1 f) (Three x2 y2 z) = Three (x1 <> x2) (y1 <> y2) (f z)
+
+instance (Arbitrary a, Arbitrary b, Arbitrary c) =>
+         Arbitrary (Three a b c) where
+  arbitrary = do
+    x <- arbitrary
+    y <- arbitrary
+    z <- arbitrary
+    return (Three x y z)
+
+instance (Eq a, Eq b, Eq c) => EqProp (Three a b c) where
+  (=-=) = eq
+
+exampleThree ::
+     Three (String, Product Int, [String]) (String, String, Sum Int) ( Sum Int
+                                                                     , Sum Int
+                                                                     , Sum Int)
+exampleThree = Three ("", Product 0, [""]) ("", "", Sum 0) (Sum 1, Sum 2, Sum 3)
+
+-- 4.
+data Three' a b =
+  Three' a b b
+  deriving (Eq, Show)
+
+instance (Semigroup a, Semigroup b) => Semigroup (Three' a b) where
+  (<>) (Three' x1 y1a y1b) (Three' x2 y2a y2b) =
+    Three' (x1 <> x2) (y1a <> y2a) (y1b <> y2b)
+
+instance (Monoid a, Monoid b) => Monoid (Three' a b) where
+  mempty = Three' mempty mempty mempty
+  mappend = (<>)
+
+instance Functor (Three' a) where
+  fmap f (Three' x y1 y2) = Three' x (f y1) (f y2)
+
+instance (Monoid a) => Applicative (Three' a) where
+  pure x = Three' mempty x x
+  (<*>) (Three' x1 f g) (Three' x2 y1 y2) = Three' (x1 <> x2) (f y1) (g y2)
+
+instance (Arbitrary a, Arbitrary b) => Arbitrary (Three' a b) where
+  arbitrary = do
+    x <- arbitrary
+    y1 <- arbitrary
+    y2 <- arbitrary
+    return (Three' x y1 y2)
+
+instance (Eq a, Eq b) => EqProp (Three' a b) where
+  (=-=) = eq
+
+exampleThree' ::
+     Three' (String, Product Int, [String]) (String, String, Sum Int)
+exampleThree' = Three' ("", Product 0, [""]) ("", "", Sum 0) ("", "", Sum 0)
+
+-- 5.
+data Four a b c d =
+  Four a b c d
+  deriving (Eq, Show)
+
+instance (Semigroup a, Semigroup b, Semigroup c, Semigroup d) =>
+         Semigroup (Four a b c d) where
+  (<>) (Four w1 x1 y1 z1) (Four w2 x2 y2 z2) =
+    Four (w1 <> w2) (x1 <> x2) (y1 <> y2) (z1 <> z2)
+
+instance (Monoid a, Monoid b, Monoid c, Monoid d) => Monoid (Four a b c d) where
+  mempty = Four mempty mempty mempty mempty
+  mappend = (<>)
+
+instance Functor (Four a b c) where
+  fmap f (Four w x y z) = Four w x y (f z)
+
+instance (Monoid a, Monoid b, Monoid c) => Applicative (Four a b c) where
+  pure = Four mempty mempty mempty
+  (<*>) (Four w1 x1 y1 f) (Four w2 x2 y2 z) =
+    Four (w1 <> w2) (x1 <> x2) (y1 <> y2) (f z)
+
+instance (Arbitrary a, Arbitrary b, Arbitrary c, Arbitrary d) =>
+         Arbitrary (Four a b c d) where
+  arbitrary = do
+    w <- arbitrary
+    x <- arbitrary
+    y <- arbitrary
+    z <- arbitrary
+    return (Four w x y z)
+
+instance (Eq a, Eq b, Eq c, Eq d) => EqProp (Four a b c d) where
+  (=-=) = eq
+
+exampleFour ::
+     Four (String, Product Int, [String]) (String, String, Sum Int) ( Sum Int
+                                                                    , Sum Int
+                                                                    , Sum Int) ( String
+                                                                               , String
+                                                                               , String)
+exampleFour =
+  Four ("", Product 0, [""]) ("", "", Sum 0) (Sum 1, Sum 2, Sum 3) ("", "", "")
+
+-- 6.
+data Four' a b =
+  Four' a a a b
+  deriving (Eq, Show)
+
+instance (Semigroup a, Semigroup b) => Semigroup (Four' a b) where
+  (<>) (Four' w1 x1 y1 z1) (Four' w2 x2 y2 z2) =
+    Four' (w1 <> w2) (x1 <> x2) (y1 <> y2) (z1 <> z2)
+
+instance (Monoid a, Monoid b) => Monoid (Four' a b) where
+  mempty = Four' mempty mempty mempty mempty
+  mappend = (<>)
+
+instance Functor (Four' a) where
+  fmap f (Four' w x y z) = Four' w x y (f z)
+
+instance (Monoid a) => Applicative (Four' a) where
+  pure = Four' mempty mempty mempty
+  (<*>) (Four' w1 x1 y1 f) (Four' w2 x2 y2 z) =
+    Four' (w1 <> w2) (x1 <> x2) (y1 <> y2) (f z)
+
+instance (Arbitrary a, Arbitrary b) => Arbitrary (Four' a b) where
+  arbitrary = do
+    w <- arbitrary
+    x <- arbitrary
+    y <- arbitrary
+    z <- arbitrary
+    return (Four' w x y z)
+
+instance (Eq a, Eq b) => EqProp (Four' a b) where
+  (=-=) = eq
+
+exampleFour' :: Four' (Sum Int, Sum Int, Sum Int) (String, String, String)
+exampleFour' =
+  Four'
+    (Sum 1, Sum 2, Sum 3)
+    (Sum 4, Sum 5, Sum 6)
+    (Sum 7, Sum 8, Sum 9)
+    ("", "", "")
+
+chapterApplicativeInstancesExercise :: IO ()
+chapterApplicativeInstancesExercise = do
+  sectionLabel "Chapter Applicative Instances Exercise"
+  quickBatch $ applicative examplePair
+  quickBatch $ applicative exampleTwo
+  quickBatch $ applicative exampleThree
+  quickBatch $ applicative exampleThree'
+  quickBatch $ applicative exampleFour
+  quickBatch $ applicative exampleFour'
+
+-- Combinations
+stops :: String
+stops = "pbtdkg"
+
+vowels :: String
+vowels = "aeiou"
+
+combos :: [a] -> [b] -> [c] -> [(a, b, c)]
+combos = liftA3 (\a b c -> (a, b, c))
+
+combosApplied = combos stops vowels stops
+
 main :: IO ()
 main = do
   listApplicativeExercise
   zipListApplicativeExercise
   validationApplicativeExercise
+  chapterApplicativeInstancesExercise
+  sectionLabel "Chapter Combinations Exercise"
+  print combos
